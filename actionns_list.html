@@ -1,0 +1,732 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Business Development Actions Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .container {
+      max-width: 1600px; margin: 0 auto; background: white; border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.1); overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white;
+      padding: 30px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .header h1 { font-size: 28px; font-weight: 600; }
+    .header-stats { display: flex; gap: 30px; }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    .stat-label { font-size: 12px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+    .controls {
+      padding: 20px 30px; background: #f8f9fa; border-bottom: 1px solid #dee2e6;
+      display: flex; gap: 15px; flex-wrap: wrap; align-items: center;
+    }
+    .search-box { flex: 1; min-width: 250px; position: relative; }
+    .search-box input {
+      width: 100%; padding: 10px 15px 10px 40px; border: 1px solid #dee2e6;
+      border-radius: 8px; font-size: 14px;
+    }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6c757d; }
+    .filter-dropdown {
+      padding: 10px 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white; font-size: 14px; cursor: pointer;
+    }
+    .btn {
+      padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s ease;
+    }
+    .btn-primary { background: #4f46e5; color: white; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-export { background: #10b981; color: white; }
+    .btn-export:hover { background: #059669; }
+    .table-container { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { position: sticky; top: 0; background: #f8f9fa; z-index: 10; }
+    th {
+      padding: 15px; text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.5px; color: #6c757d; border-bottom: 2px solid #dee2e6; cursor: pointer; user-select: none;
+    }
+    th:hover { background: #e9ecef; }
+    td { padding: 15px; border-bottom: 1px solid #f1f3f5; font-size: 14px; vertical-align: top; }
+    tr:hover { background: #f8f9fa; }
+    .organization-name { font-weight: 600; color: #212529; }
+    .contact-info { font-size: 12px; color: #6c757d; margin-top: 3px; }
+    .approach-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; background: #f3f4f6; color: #374151; }
+    .priority { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .priority-high { background: #fecaca; color: #7f1d1d; }
+    .priority-medium { background: #fed7aa; color: #7c2d12; }
+    .priority-low { background: #d9f99d; color: #365314; }
+    .date-info { font-size: 12px; color: #6c757d; }
+    .action-container { max-width: 420px; line-height: 1.5; position: relative; }
+    .action-text { cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s; }
+    .action-text:hover { background: #f0f9ff; }
+    .action-text.editing { background: #fef3c7; }
+    .edit-icon { display: inline-block; margin-left: 8px; color: #6b7280; font-size: 12px; opacity: 0.8; }
+    .action-textarea {
+      width: 100%; min-height: 80px; padding: 8px; border: 2px solid #4f46e5; border-radius: 6px; font-size: 14px; font-family: inherit; resize: vertical;
+    }
+    .action-buttons { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-save, .btn-cancel { padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-save { background: #10b981; color: white; }
+    .btn-cancel { background: #ef4444; color: white; }
+    .history-link { display: inline-block; margin-top: 4px; font-size: 11px; color: #4f46e5; cursor: pointer; text-decoration: none; }
+    .history-link:hover { text-decoration: underline; }
+    .sort-arrow { display: inline-block; margin-left: 5px; opacity: 0.5; }
+    .sort-arrow.active { opacity: 1; }
+    .editable, .editable-select { cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+    .editable:hover, .editable-select:hover { background: #eef2ff; }
+    input.inline-input, select.inline-select, input.inline-date {
+      width: 100%; padding: 6px 8px; border: 2px solid #4f46e5; border-radius: 6px; font-size: 14px; font-family: inherit;
+    }
+    #addModal, #historyModal {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100;
+    }
+    .modal-content {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 80vh; overflow-y: auto;
+    }
+    .modal-header { padding: 20px; border-bottom: 1px solid #dee2e6; }
+    .modal-body { padding: 20px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 8px 12px; border: 1px solid #dee2e6; border-radius: 6px; font-size: 14px;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .modal-footer {
+      padding: 20px; border-top: 1px solid #dee2e6; display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .history-item { padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; background: #f9fafb; }
+    .history-date { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
+    .history-content { font-size: 14px; line-height: 1.5; color: #374151; }
+    .history-user { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+    .current-version { background: #fef3c7; border-color: #fbbf24; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1>Business Development Actions Tracker</h1>
+        <p style="margin-top: 5px; opacity: 0.9;">Comprehensive view of all business development activities</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat-item">
+          <div class="stat-value" id="totalCount">0</div>
+          <div class="stat-label">Total Actions</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search organizations, contacts, or actions...">
+      </div>
+
+      <select class="filter-dropdown" id="typeFilter">
+        <option value="">All Types</option>
+        <option value="leads">Leads</option>
+        <option value="build-relationship">Build Relationship</option>
+        <option value="maintain-relationship">Maintain Relationship</option>
+        <option value="other">Other</option>
+      </select>
+
+      <select class="filter-dropdown" id="priorityFilter">
+        <option value="">All Priorities</option>
+        <option value="high">High Priority</option>
+        <option value="medium">Medium Priority</option>
+        <option value="low">Low Priority</option>
+      </select>
+
+      <button class="btn btn-primary" onclick="showAddModal()">+ Add Action</button>
+      <button class="btn btn-export" onclick="exportData()">Export to CSV</button>
+    </div>
+
+    <div class="table-container">
+      <table id="actionsTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable('organization')">Organization <span class="sort-arrow" data-field="organization">↕</span></th>
+            <th onclick="sortTable('type')">Approach Type <span class="sort-arrow" data-field="type">↕</span></th>
+            <th onclick="sortTable('priority')">Priority <span class="sort-arrow" data-field="priority">↕</span></th>
+            <th>Action Required</th>
+            <th onclick="sortTable('date')">Target Date <span class="sort-arrow" data-field="date">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"><!-- rows go here --></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Add Modal -->
+  <div id="addModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Add New Action</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Organization Name *</label>
+          <input type="text" id="newOrg" required>
+        </div>
+        <div class="form-group">
+          <label>Contact Person</label>
+          <input type="text" id="newContact">
+        </div>
+        <div class="form-group">
+          <label>Approach Type *</label>
+          <select id="newType" required>
+            <option value="leads">Leads</option>
+            <option value="build-relationship">Build Relationship</option>
+            <option value="maintain-relationship">Maintain Relationship</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority *</label>
+          <select id="newPriority" required>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Action Required *</label>
+          <textarea id="newAction" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Target Date</label>
+          <input type="date" id="newDate">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addNewAction()">Add Action</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="historyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Action History</h2>
+        <p style="margin-top: 5px; color: #6b7280; font-size: 14px;">
+          <span id="historyOrg"></span>
+        </p>
+      </div>
+      <div class="modal-body" id="historyContent"><!-- history items go here --></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeHistoryModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Helpers ----------
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+    const humanDate = (d) => {
+      if (!d) return '—';
+      const dt = new Date(d);
+      if (isNaN(+dt)) return d;
+      return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    };
+    const titleCase = (s) => (s || '').toString().split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+    // ---------- Default Data ----------
+    const DEFAULT_DATA = [
+      { id: 1,  organization: "Honda Finance", contact: "Grace Coleman, Charlotte Tweed", type: "leads", priority: "high",
+        action: "Planned meeting with Grace Coleman (2nd week Sep); email 8 Sep bounced; asked Eileen to introduce; scheduled meeting with Grace Coleman & Charlotte Tweed 18 Sep 11:00.",
+        actionHistory: [{ date: new Date().toISOString(), text: "Planned meeting with Grace Coleman (2nd week Sep); email 8 Sep bounced; asked Eileen to introduce; scheduled meeting with Grace Coleman & Charlotte Tweed 18 Sep 11:00.", user: "Current User" }],
+        date: "2024-09-19" },
+      { id: 2,  organization: "Auxillias", contact: "", type: "leads", priority: "medium",
+        action: "Need to follow up",
+        actionHistory: [{ date: new Date().toISOString(), text: "Need to follow up", user: "Current User" }],
+        date: "2024-09-16" },
+      { id: 3,  organization: "Schroders", contact: "Chris Jenner", type: "leads", priority: "high",
+        action: "Work out how to position demo for Chris Jenner to confirm time for second half of Oct.",
+        actionHistory: [{ date: new Date().toISOString(), text: "Work out how to position demo for Chris Jenner to confirm time for second half of Oct.", user: "Current User" }],
+        date: "2024-10-15" },
+      { id: 4,  organization: "NED: Sumitomo, Vanquis, Chubb", contact: "Karen Briggs, Fiona Fry, David Hicks", type: "leads", priority: "medium",
+        action: "Karen Briggs. Coffee on 10 Sep; speak with Fiona Fry and David Hicks.",
+        actionHistory: [{ date: new Date().toISOString(), text: "Karen Briggs. Coffee on 10 Sep; speak with Fiona Fry and David Hicks.", user: "Current User" }],
+        date: "2024-09-20" },
+      { id: 5,  organization: "Close Brothers", contact: "Tom Linton, Seeley, Dalglish, Shyam Hari", type: "build-relationship", priority: "high",
+        action: "4 CV for two rolls for Tom Linton",
+        actionHistory: [{ date: new Date().toISOString(), text: "4 CV for two rolls for Tom Linton", user: "Current User" }],
+        date: "2024-09-25" },
+      { id: 6,  organization: "PwC", contact: "Jess, Ian McConnell, Mike", type: "build-relationship", priority: "high",
+        action: "Meeting with Jess this week and demo for GS PwC Swiss Ian McConnell & Mike on 14th of Oct. Need storyboard",
+        actionHistory: [{ date: new Date().toISOString(), text: "Meeting with Jess this week and demo for GS PwC Swiss Ian McConnell & Mike on 14th of Oct. Need storyboard", user: "Current User" }],
+        date: "2024-10-14" },
+      { id: 7,  organization: "Virgin Money (VM)", contact: "Guy, GW, Abhi Sharma", type: "build-relationship", priority: "high",
+        action: "AG to call Guy (Head of Integration); lunch with GW on 18 Sep; GS to qualify route via Microsoft (Abhi Sharma; FOS-FLA-FSCS mtg 28 Aug); Guy rescheduling. First of Oct",
+        actionHistory: [{ date: new Date().toISOString(), text: "AG to call Guy (Head of Integration); lunch with GW on 18 Sep; GS to qualify route via Microsoft (Abhi Sharma; FOS-FLA-FSCS mtg 28 Aug); Guy rescheduling. First of Oct", user: "Current User" }],
+        date: "2024-10-01" },
+      { id: 8,  organization: "Motonovo / Aldermore", contact: "Ian Carter", type: "build-relationship", priority: "medium",
+        action: "Get Ian Carter (Head of Remediation at Aldermore) to introduce to someone in KYC",
+        actionHistory: [{ date: new Date().toISOString(), text: "Get Ian Carter (Head of Remediation at Aldermore) to introduce to someone in KYC", user: "Current User" }],
+        date: "2024-09-30" },
+      { id: 9,  organization: "Ayvens (ex-ALD/LeasePlan)", contact: "Adam Facey, Sarah", type: "build-relationship", priority: "high",
+        action: "Follow-up meeting; met Adam Facey 29 Aug; Demo 3 Sep; follow up Sarah & Adam; 2 threads: programme support and platform with IT/IT Security; chase again.",
+        actionHistory: [{ date: new Date().toISOString(), text: "Follow-up meeting; met Adam Facey 29 Aug; Demo 3 Sep; follow up Sarah & Adam; 2 threads: programme support and platform with IT/IT Security; chase again.", user: "Current User" }],
+        date: "2024-09-25" },
+      { id:10, organization: "TSB", contact: "Adam Lishman (CFO)", type: "build-relationship", priority: "high",
+        action: "Drinks set for 24 Sep.",
+        actionHistory: [{ date: new Date().toISOString(), text: "Drinks set for 24 Sep.", user: "Current User" }],
+        date: "2024-09-24" },
+      // ... (rest of your items trimmed for brevity; they will still load if present in localStorage)
+    ];
+
+    // ---------- State ----------
+    let actionsData = [];
+    let sortField = null;
+    let sortDir = 1; // 1 asc, -1 desc
+    let editingId = null; // action-text editor
+
+    // ---------- Init ----------
+    function init() {
+      const saved = localStorage.getItem('bd_actions');
+      if (saved) {
+        try { actionsData = JSON.parse(saved); } catch { actionsData = DEFAULT_DATA; }
+      } else {
+        actionsData = DEFAULT_DATA;
+      }
+
+      $('#searchInput').addEventListener('input', render);
+      $('#typeFilter').addEventListener('change', render);
+      $('#priorityFilter').addEventListener('change', render);
+
+      // Delegated handlers for action editor + history
+      $('#tableBody').addEventListener('click', (e) => {
+        const saveBtn = e.target.closest('.btn-save');
+        const cancelBtn = e.target.closest('.btn-cancel');
+        const actionText = e.target.closest('.action-text');
+        const histLink = e.target.closest('.history-link');
+
+        if (histLink) {
+          e.preventDefault();
+          const wrap = histLink.closest('.action-wrap');
+          const id = Number(wrap?.dataset.id);
+          const item = actionsData.find(x => x.id === id);
+          if (item) showHistory(item);
+          return;
+        }
+        if (actionText) {
+          const wrap = actionText.closest('.action-wrap');
+          const id = Number(wrap?.dataset.id);
+          if (!id) return;
+          beginEditAction(id, wrap);
+          return;
+        }
+        if (saveBtn) {
+          const wrap = saveBtn.closest('.action-wrap');
+          const id = Number(wrap?.dataset.id);
+          commitEdit(id, wrap);
+          return;
+        }
+        if (cancelBtn) {
+          const wrap = cancelBtn.closest('.action-wrap');
+          const id = Number(wrap?.dataset.id);
+          cancelEdit(id, wrap);
+          return;
+        }
+      });
+
+      // Delegated handlers for generic inline editing (org, contact, type, priority, date)
+      $('#tableBody').addEventListener('click', (e) => {
+        const el = e.target.closest('.editable, .editable-select');
+        if (!el) return;
+        const id = Number(el.closest('tr')?.dataset.id);
+        if (!id) return;
+
+        const field = el.dataset.field;
+        if (!field) return;
+
+        if (el.classList.contains('editable-select')) {
+          toSelectEditor(el, id, field);
+        } else {
+          toTextEditor(el, id, field);
+        }
+      });
+
+      // Close modals on backdrop click
+      window.addEventListener('click', (e) => {
+        if (e.target.id === 'addModal') closeModal();
+        if (e.target.id === 'historyModal') closeHistoryModal();
+      });
+
+      render();
+    }
+
+    function persist() {
+      localStorage.setItem('bd_actions', JSON.stringify(actionsData));
+    }
+
+    // ---------- Rendering ----------
+    function render() {
+      const tbody = $('#tableBody');
+      tbody.innerHTML = '';
+
+      const term = ($('#searchInput').value || '').toLowerCase();
+      const fType = $('#typeFilter').value;
+      const fPriority = $('#priorityFilter').value;
+
+      let rows = actionsData.filter(it => {
+        const blob = [it.organization, it.contact, it.action].join(' ').toLowerCase();
+        const matchesTerm = !term || blob.includes(term);
+        const matchesType = !fType || (it.type === fType);
+        const matchesPriority = !fPriority || (it.priority === fPriority);
+        return matchesTerm && matchesType && matchesPriority;
+      });
+
+if (sortField) {
+  rows.sort((a, b) => {
+    // Priority: custom ranking High -> Medium -> Low
+    if (sortField === 'priority') {
+      const rank = { high: 0, medium: 1, low: 2 };
+      const ra = rank[(a.priority || '').toLowerCase()] ?? 999;
+      const rb = rank[(b.priority || '').toLowerCase()] ?? 999;
+      return (ra - rb) * sortDir;
+    }
+
+    // Date: newest/oldest via timestamp
+    if (sortField === 'date') {
+      const da = a.date ? new Date(a.date).getTime() : 0;
+      const db = b.date ? new Date(b.date).getTime() : 0;
+      return (da - db) * sortDir;
+    }
+
+    // Default string compare
+    let va = (a[sortField] ?? '').toString().toLowerCase();
+    let vb = (b[sortField] ?? '').toString().toLowerCase();
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+}
+
+
+      rows.forEach(it => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = it.id;
+
+        // Organization & contact — both editable
+        const orgTd = document.createElement('td');
+        orgTd.innerHTML = `
+          <div class="organization-name editable" data-field="organization" title="Click to edit organization">${escapeHtml(it.organization || '')}</div>
+          <div class="contact-info editable" data-field="contact" title="Click to edit contact">${escapeHtml(it.contact || '')}</div>
+        `;
+        tr.appendChild(orgTd);
+
+        // Approach (select)
+        const typeTd = document.createElement('td');
+        typeTd.innerHTML = `<span class="approach-badge editable-select" data-field="type" title="Click to change type">${escapeHtml(titleCase(it.type || ''))}</span>`;
+        tr.appendChild(typeTd);
+
+        // Priority (select)
+        const prTd = document.createElement('td');
+        prTd.innerHTML = `<span class="priority priority-${escapeHtml((it.priority||'low').toLowerCase())} editable-select" data-field="priority" title="Click to change priority">${escapeHtml(titleCase(it.priority||''))}</span>`;
+        tr.appendChild(prTd);
+
+        // Action (textarea editor + history)
+        const actionTd = document.createElement('td');
+        actionTd.className = 'action-container';
+        const wrap = document.createElement('div');
+        wrap.className = 'action-wrap';
+        wrap.dataset.id = it.id;
+        if (editingId === it.id) {
+          wrap.innerHTML = editorHtml(it.action);
+        } else {
+          wrap.innerHTML = `
+            <div class="action-text" title="Click to edit">
+              ${nl2br(escapeHtml(it.action || ''))}
+              <span class="edit-icon">✏️ Edit</span>
+            </div>
+            <a class="history-link" href="#">View history</a>
+          `;
+        }
+        actionTd.appendChild(wrap);
+        tr.appendChild(actionTd);
+
+        // Date (inline date input)
+        const dateTd = document.createElement('td');
+        const dateVal = it.date || '';
+        dateTd.innerHTML = `
+          <input type="date" class="inline-date" value="${escapeAttr(dateVal)}" title="Change date">
+          <div class="date-info" style="margin-top:6px">${humanDate(dateVal)}</div>
+        `;
+        // Save on change
+        dateTd.querySelector('input').addEventListener('change', (ev) => {
+          const v = ev.target.value;
+          const row = actionsData.find(x => x.id === it.id);
+          if (row) {
+            row.date = v;
+            persist();
+            // refresh human readable
+            dateTd.querySelector('.date-info').textContent = humanDate(v);
+          }
+        });
+        tr.appendChild(dateTd);
+
+        tbody.appendChild(tr);
+      });
+
+      // header stat
+      $('#totalCount').textContent = actionsData.length;
+
+      // sort arrows
+      $$('.sort-arrow').forEach(el => {
+        el.classList.toggle('active', el.dataset.field === sortField);
+        el.textContent = el.dataset.field === sortField ? (sortDir === 1 ? '↑' : '↓') : '↕';
+      });
+    }
+
+    function editorHtml(text) {
+      return `
+        <textarea class="action-textarea">${escapeHtmlForTextarea(text || '')}</textarea>
+        <div class="action-buttons">
+          <button type="button" class="btn-save">Save</button>
+          <button type="button" class="btn-cancel">Cancel</button>
+        </div>
+      `;
+    }
+
+    function sortTable(field) {
+      if (sortField === field) {
+        sortDir = -sortDir;
+      } else {
+        sortField = field;
+        sortDir = 1;
+      }
+      render();
+    }
+
+    // ---------- Inline Edit (Action) ----------
+    function beginEditAction(id, wrap) {
+      if (editingId !== null && editingId !== id) {
+        editingId = null;
+        render();
+      }
+      editingId = id;
+      wrap.innerHTML = editorHtml(actionsData.find(x => x.id === id)?.action || '');
+      const ta = wrap.querySelector('.action-textarea');
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    }
+
+    function commitEdit(id, wrap) {
+      const row = actionsData.find(x => x.id === id);
+      if (!row) return;
+      const ta = wrap.querySelector('.action-textarea');
+      const val = (ta?.value || '').trim();
+      if (!val) return; // keep non-empty
+      if (!Array.isArray(row.actionHistory)) row.actionHistory = [];
+      row.actionHistory.push({ date: new Date().toISOString(), text: val, user: 'You' });
+      row.action = val;
+      persist();
+      editingId = null;
+      render();
+    }
+
+    function cancelEdit(id, wrap) {
+      editingId = null;
+      render();
+    }
+
+    function showHistory(item) {
+      $('#historyOrg').textContent = `${item.organization} — Action versions`;
+      const box = $('#historyContent');
+      box.innerHTML = '';
+
+      const hist = (item.actionHistory || []).slice().reverse();
+      if (hist.length === 0) {
+        box.innerHTML = '<p style="color:#6b7280;">No history yet.</p>';
+      } else {
+        hist.forEach((h, idx) => {
+          const div = document.createElement('div');
+          div.className = 'history-item' + (idx === 0 ? ' current-version' : '');
+          div.innerHTML = `
+            <div class="history-date">${humanDate(h.date)} ${new Date(h.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+            <div class="history-content">${nl2br(escapeHtml(h.text || ''))}</div>
+            <div class="history-user">by ${escapeHtml(h.user || 'Unknown')}</div>
+          `;
+          box.appendChild(div);
+        });
+      }
+      $('#historyModal').style.display = 'block';
+    }
+
+    function closeHistoryModal() {
+      $('#historyModal').style.display = 'none';
+    }
+
+    // ---------- Add Modal ----------
+    function showAddModal() {
+      $('#addModal').style.display = 'block';
+      setTimeout(() => $('#newOrg').focus(), 50);
+    }
+    function closeModal() {
+      $('#addModal').style.display = 'none';
+    }
+
+    function addNewAction() {
+      const org = $('#newOrg').value.trim();
+      const contact = $('#newContact').value.trim();
+      const type = $('#newType').value;
+      const priority = $('#newPriority').value;
+      const action = $('#newAction').value.trim();
+      const date = $('#newDate').value;
+
+      if (!org || !type || !priority || !action) {
+        alert('Please fill all required fields (marked with *).');
+        return;
+      }
+
+      const nextId = (actionsData.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1);
+      const entry = {
+        id: nextId, organization: org, contact, type, priority,
+        action, date,
+        actionHistory: [{ date: new Date().toISOString(), text: action, user: 'You' }],
+      };
+      actionsData.push(entry);
+      persist();
+      closeModal();
+
+      // reset form
+      $('#newOrg').value = '';
+      $('#newContact').value = '';
+      $('#newType').value = 'leads';
+      $('#newPriority').value = 'high';
+      $('#newAction').value = '';
+      $('#newDate').value = '';
+
+      render();
+    }
+
+    // ---------- Export ----------
+    function exportData() {
+      const headers = ['Organization','Contact','Approach Type','Priority','Action Required','Target Date'];
+      const rows = actionsData.map(it => [
+        it.organization || '',
+        it.contact || '',
+        titleCase(it.type || ''),
+        titleCase(it.priority || ''),
+        (it.action || '').replace(/\r?\n/g, ' '),
+        it.date || ''
+      ]);
+
+      let csv = headers.join(',') + '\n';
+      rows.forEach(r => { csv += r.map(csvEscape).join(',') + '\n'; });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const today = new Date().toISOString().slice(0,10);
+      a.href = url;
+      a.download = `bd_actions_${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function csvEscape(val) {
+      const s = (val ?? '').toString();
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    }
+
+    // ---------- Generic inline editors ----------
+    function toTextEditor(el, id, field) {
+      const current = (actionsData.find(x => x.id === id)?.[field] ?? '');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'inline-input';
+      input.value = current;
+      el.replaceWith(input);
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+
+      const commit = () => {
+        const row = actionsData.find(x => x.id === id);
+        if (!row) return;
+        row[field] = input.value.trim();
+        persist();
+        render();
+      };
+      const cancel = () => render();
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        else if (e.key === 'Escape') cancel();
+      });
+      input.addEventListener('blur', commit);
+    }
+
+    function toSelectEditor(el, id, field) {
+      const options = field === 'type'
+        ? [['leads','Leads'],['build-relationship','Build Relationship'],['maintain-relationship','Maintain Relationship'],['other','Other']]
+        : [['high','High'],['medium','Medium'],['low','Low']];
+
+      const current = (actionsData.find(x => x.id === id)?.[field] ?? options[0][0]);
+      const sel = document.createElement('select');
+      sel.className = 'inline-select';
+      options.forEach(([val, label]) => {
+        const opt = document.createElement('option');
+        opt.value = val; opt.textContent = label;
+        if (val === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      el.replaceWith(sel);
+      sel.focus();
+
+      const commit = () => {
+        const row = actionsData.find(x => x.id === id);
+        if (!row) return;
+        row[field] = sel.value;
+        persist();
+        render();
+      };
+      const cancel = () => render();
+
+      sel.addEventListener('change', commit);
+      sel.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') commit();
+        else if (e.key === 'Escape') cancel();
+      });
+      sel.addEventListener('blur', commit);
+    }
+
+    // ---------- Small HTML helpers ----------
+    function escapeHtml(str) {
+      return (str ?? '').toString()
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function escapeAttr(str) {
+      return (str ?? '').toString().replace(/"/g, '&quot;');
+    }
+    function escapeHtmlForTextarea(str) {
+      return (str ?? '').toString()
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function nl2br(str) {
+      return (str ?? '').toString().replace(/\n/g, '<br>');
+    }
+
+    // ---------- Kickoff ----------
+    init();
+  </script>
+</body>
+</html>
