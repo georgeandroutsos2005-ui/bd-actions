@@ -125,29 +125,30 @@
     </div>
 
     <div class="controls">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search organizations, contacts, or actions...">
-      </div>
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search organizations, contacts, or actions...">
+  </div>
 
-      <select class="filter-dropdown" id="typeFilter">
-        <option value="">All Types</option>
-        <option value="leads">Leads</option>
-        <option value="build-relationship">Build Relationship</option>
-        <option value="maintain-relationship">Maintain Relationship</option>
-        <option value="other">Other</option>
-      </select>
+  <select class="filter-dropdown" id="typeFilter">
+    <option value="">All Types</option>
+    <option value="leads">Leads</option>
+    <option value="build-relationship">Build Relationship</option>
+    <option value="maintain-relationship">Maintain Relationship</option>
+    <option value="other">Other</option>
+  </select>
 
-      <select class="filter-dropdown" id="priorityFilter">
-        <option value="">All Priorities</option>
-        <option value="high">High Priority</option>
-        <option value="medium">Medium Priority</option>
-        <option value="low">Low Priority</option>
-      </select>
+  <select class="filter-dropdown" id="priorityFilter">
+    <option value="">All Priorities</option>
+    <option value="high">High Priority</option>
+    <option value="medium">Medium Priority</option>
+    <option value="low">Low Priority</option>
+  </select>
 
-      <button class="btn btn-primary" onclick="showAddModal()">+ Add Action</button>
-      <button class="btn btn-export" onclick="exportData()">Export to CSV</button>
-    </div>
+  <button class="btn btn-primary" onclick="showAddModal()">+ Add Action</button>
+  <button class="btn btn-primary" id="saveBtn" title="Push local changes to the cloud">Save</button>
+  <button class="btn btn-export" onclick="exportData()">Export to CSV</button>
+</div>
 
     <div class="table-container">
       <table id="actionsTable">
@@ -728,5 +729,66 @@ if (sortField) {
     // ---------- Kickoff ----------
     init();
   </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA4qNmhYjXAX9x8xMJEMBwemW-34K7aVYk",
+    authDomain: "george-e725d.firebaseapp.com",
+    projectId: "george-e725d",
+    storageBucket: "george-e725d.firebasestorage.app",
+    messagingSenderId: "353654645817",
+    appId: "1:353654645817:web:906be7a8e1a4ac81a8d9e8",
+    measurementId: "G-E8YJ6SX7DS"
+  };
+
+  // Init Firebase + Firestore
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const docRef = db.collection('bd_actions').doc('default');
+
+  // Sign in anonymously (matches the rules we set)
+  auth.signInAnonymously().catch(console.error);
+
+  // Subscribe for live updates (so other devices see changes)
+  auth.onAuthStateChanged(async user => {
+    if (!user) return;
+
+    // Create the shared doc if it doesn't exist yet
+    const snap = await docRef.get();
+    if (!snap.exists) {
+      const local = localStorage.getItem('bd_actions');
+      const seed = local ? JSON.parse(local) : (window.actionsData || []);
+      await docRef.set({ items: seed, updatedAt: Date.now() });
+    }
+
+    docRef.onSnapshot(s => {
+      const data = s.data();
+      if (!data || !Array.isArray(data.items)) return;
+      window.actionsData = data.items;
+      localStorage.setItem('bd_actions', JSON.stringify(window.actionsData));
+      if (typeof render === 'function') render();
+    });
+  });
+
+  // Hook up a Save button if you have one with id="saveBtn"
+  async function writeCloud() {
+    await docRef.set({ items: window.actionsData, updatedAt: Date.now() });
+  }
+  const saveBtn = document.getElementById('saveBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      saveBtn.disabled = true;
+      const old = saveBtn.textContent;
+      saveBtn.textContent = 'Saving…';
+      try { await writeCloud(); saveBtn.textContent = 'Saved ✓'; }
+      catch (e) { alert('Save failed: ' + (e?.message || e)); saveBtn.textContent = old; }
+      finally { setTimeout(() => { saveBtn.textContent = 'Save'; saveBtn.disabled = false; }, 800); }
+    });
+  }
+</script>
+
 </body>
 </html>
