@@ -225,7 +225,7 @@
       </div>
       <div class="modal-body" id="historyContent"><!-- history items go here --></div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeHistoryModal()">Close</button>
+        <button id="historyCloseBtn" class="btn">Close</button>
       </div>
     </div>
   </div>
@@ -374,6 +374,20 @@
     const idx = Number(btn.dataset.idx);
     deleteHistoryEntry(id, idx);
   });
+// Wire up the explicit Close button for the History modal
+const closeBtn = document.getElementById('historyCloseBtn');
+if (closeBtn) closeBtn.addEventListener('click', closeHistoryModal);
+
+// Close the history modal with ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeHistoryModal();
+});
+
+// Prevent clicks inside the modal content from closing the modal (stop backdrop bubbling)
+const historyModalContent = document.querySelector('#historyModal .modal-content');
+if (historyModalContent) {
+  historyModalContent.addEventListener('click', (e) => e.stopPropagation());
+}
 
   window.actionsData = actionsData; // (if you have this line)
   render();
@@ -617,6 +631,10 @@ function showHistory(item) {
 
   // Show modal
   $('#historyModal').style.display = 'block';
+}
+    function closeHistoryModal() {
+  const m = document.getElementById('historyModal');
+  if (m) m.style.display = 'none';
 }
 
 
