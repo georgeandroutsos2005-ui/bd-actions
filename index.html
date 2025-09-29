@@ -547,32 +547,41 @@ if (sortField) {
       render();
     }
 
-    function showHistory(item) {
-      $('#historyOrg').textContent = `${item.organization} — Action versions`;
-      const box = $('#historyContent');
-      box.innerHTML = '';
+function showHistory(item) {
+  $('#historyOrg').textContent = `${item.organization} — Action versions`;
+  const box = $('#historyContent');
+  box.innerHTML = '';
 
-      const hist = (item.actionHistory || []).slice().reverse();
-      if (hist.length === 0) {
-        box.innerHTML = '<p style="color:#6b7280;">No history yet.</p>';
-      } else {
-        hist.forEach((h, idx) => {
-          const div = document.createElement('div');
-          div.className = 'history-item' + (idx === 0 ? ' current-version' : '');
-          div.innerHTML = `
-            <div class="history-date">${humanDate(h.date)} ${new Date(h.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-            <div class="history-content">${nl2br(escapeHtml(h.text || ''))}</div>
-            <div class="history-user">by ${escapeHtml(h.user || 'Unknown')}</div>
-          `;
-          box.appendChild(div);
-        });
-      }
-      $('#historyModal').style.display = 'block';
+  // Build list newest -> oldest, but keep the ORIGINAL index on each card
+  const hist = item.actionHistory || [];
+  if (hist.length === 0) {
+    box.innerHTML = '<p style="color:#6b7280;">No history yet.</p>';
+  } else {
+    for (let i = hist.length - 1; i >= 0; i--) {
+      const h = hist[i];
+      const div = document.createElement('div');
+      div.className = 'history-item' + (i === hist.length - 1 ? ' current-version' : '');
+      div.innerHTML = `
+        <div class="history-date">
+          ${humanDate(h.date)} ${new Date(h.date).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+        </div>
+        <div class="history-content">${nl2br(escapeHtml(h.text || ''))}</div>
+        <div class="history-user" style="display:flex; align-items:center; gap:8px; justify-content:space-between; margin-top:8px;">
+          <span>by ${escapeHtml(h.user || 'Unknown')}</span>
+          <button class="btn btn-cancel btn-delete-history"
+                  data-id="${item.id}"
+                  data-idx="${i}"
+                  title="Delete this history entry">Delete</button>
+        </div>
+      `;
+      box.appendChild(div);
     }
+  }
 
-    function closeHistoryModal() {
-      $('#historyModal').style.display = 'none';
-    }
+  // Show modal
+  $('#historyModal').style.display = 'block';
+}
+
 
     // ---------- Add Modal ----------
     function showAddModal() {
