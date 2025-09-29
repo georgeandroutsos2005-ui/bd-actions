@@ -366,9 +366,18 @@
         if (e.target.id === 'addModal') closeModal();
         if (e.target.id === 'historyModal') closeHistoryModal();
       });
-window.actionsData = actionsData;
-      render();
-    }
+        $('#historyContent').addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-delete-history');
+    if (!btn) return;
+
+    const id = Number(btn.dataset.id);
+    const idx = Number(btn.dataset.idx);
+    deleteHistoryEntry(id, idx);
+  });
+
+  window.actionsData = actionsData; // (if you have this line)
+  render();
+}
 
 function persist() {
   localStorage.setItem('bd_actions', JSON.stringify(actionsData));
@@ -541,6 +550,34 @@ if (sortField) {
       editingId = null;
       render();
     }
+function deleteHistoryEntry(actionId, historyIndex) {
+  const row = actionsData.find(x => x.id === actionId);
+  if (!row || !Array.isArray(row.actionHistory)) return;
+
+  // Confirm
+  if (!confirm('Delete this history entry? This can’t be undone.')) return;
+
+  // Remove the specific version
+  row.actionHistory.splice(historyIndex, 1);
+
+  // Update current "action" to newest remaining history (if any)
+  if (row.actionHistory.length > 0) {
+    row.action = row.actionHistory[row.actionHistory.length - 1].text || '';
+  } else {
+    row.action = '';
+  }
+
+  // Save locally (and to cloud if available), re-render table and modal
+  persist();
+  if (typeof writeCloud === 'function') {
+    // optional: push to Firestore automatically
+    writeCloud().catch(console.error);
+  }
+  render();
+
+  // Re-open the updated history (same row)
+  showHistory(row);
+}
 
     function cancelEdit(id, wrap) {
       editingId = null;
