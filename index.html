@@ -766,13 +766,14 @@ if (sortField) {
       await docRef.set({ items: seed, updatedAt: Date.now() });
     }
 
-    docRef.onSnapshot(s => {
-      const data = s.data();
-      if (!data || !Array.isArray(data.items)) return;
-      window.actionsData = data.items;
-      localStorage.setItem('bd_actions', JSON.stringify(window.actionsData));
-      if (typeof render === 'function') render();
-    });
+docRef.onSnapshot(s => {
+  const data = s.data();
+  if (!data || !Array.isArray(data.items)) return;
+  window.actionsData = data.items;
+  actionsData = data.items;              // <-- add this line
+  localStorage.setItem('bd_actions', JSON.stringify(window.actionsData));
+  if (typeof render === 'function') render();
+});
   });
 
   // Hook up a Save button if you have one with id="saveBtn"
