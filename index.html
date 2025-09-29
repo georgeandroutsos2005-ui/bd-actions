@@ -365,13 +365,15 @@
         if (e.target.id === 'addModal') closeModal();
         if (e.target.id === 'historyModal') closeHistoryModal();
       });
-
+window.actionsData = actionsData;
       render();
     }
 
-    function persist() {
-      localStorage.setItem('bd_actions', JSON.stringify(actionsData));
-    }
+function persist() {
+  localStorage.setItem('bd_actions', JSON.stringify(actionsData));
+  window.actionsData = actionsData; // <— keep cloud payload in sync
+}
+
 
     // ---------- Rendering ----------
     function render() {
@@ -774,9 +776,9 @@ if (sortField) {
   });
 
   // Hook up a Save button if you have one with id="saveBtn"
-  async function writeCloud() {
-    await docRef.set({ items: window.actionsData, updatedAt: Date.now() });
-  }
+async function writeCloud() {
+  await docRef.set({ items: actionsData, updatedAt: Date.now() });
+}
   const saveBtn = document.getElementById('saveBtn');
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
